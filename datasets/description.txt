@@ -1,0 +1,11 @@
+├── datasets/                          # Directory for datasets
+│   ├── AWID/                          # Directory for AWID dataset
+│   │   ├── awid_train.csv             # Training data
+│   │   ├── awid_test.csv              # Testing data
+│   ├── processed/                     # Preprocessed data for FL
+│   │   ├── client1_train.csv          # Client 1 training data
+│   │   ├── client2_train.csv          # Client 2 training data
+│   │   ├── client3_train.csv          # Client 3 training data
+│   │   ├── client1_test.csv           # Client 1 testing data
+│   │   ├── client2_test.csv           # Client 2 testing data
+│   │   ├── client3_test.csv           # Client 3 testing data

@@ -1,0 +1,70 @@
+IDS-Project/
+│
+├── datasets/                          # Directory for datasets
+│   ├── AWID/                          # Directory for AWID dataset
+│   │   ├── awid_train.csv             # Training data
+│   │   ├── awid_test.csv              # Testing data
+│   ├── processed/                     # Preprocessed data for FL
+│   │   ├── client1_train.csv          # Client 1 training data
+│   │   ├── client2_train.csv          # Client 2 training data
+│   │   ├── client3_train.csv          # Client 3 training data
+│   │   ├── client1_test.csv           # Client 1 testing data
+│   │   ├── client2_test.csv           # Client 2 testing data
+│   │   ├── client3_test.csv           # Client 3 testing data
+│
+├── models/                            # Pretrained models or saved model checkpoints
+│   ├── centralized_model.h5           # Initial model before federated learning
+│   ├── final_federated_model.h5       # Final model after federated learning
+│   ├── dbn_model/                     # DBN model architecture and weights
+│
+├── notebooks/                         # Jupyter notebooks for experiments and analysis
+│   ├── data_exploration.ipynb         # Data exploration and visualization
+│   ├── model_training.ipynb           # Model training experiments
+│   ├── federated_learning.ipynb       # Federated learning experimentations
+│
+├── src/                               # Source code for the project
+│   ├── server/                        # Server-side code
+│   │   ├── server.py                  # FL server script
+│   │   ├── utils.py                   # Utility functions for the server
+│   │   ├── config.py                  # Configuration for server-side training
+│   │
+│   ├── clients/                       # Client-side code
+│   │   ├── client1/                   # Client 1's directory
+│   │   │   ├── client.py              # FL client script for Client 1
+│   │   │   ├── utils.py               # Utility functions for Client 1
+│   │   ├── client2/                   # Client 2's directory
+│   │   │   ├── client.py              # FL client script for Client 2
+│   │   │   ├── utils.py               # Utility functions for Client 2
+│   │   ├── client3/                   # Client 3's directory
+│   │   │   ├── client.py              # FL client script for Client 3
+│   │   │   ├── utils.py               # Utility functions for Client 3
+│   │
+│   ├── models/                        # Model definitions and training scripts
+│   │   ├── dbn.py                     # Deep Belief Network (DBN) model architecture
+│   │   ├── fl_model.py                # Federated Learning model architecture
+│   │   ├── train_centralized.py       # Script for centralized training (baseline)
+│   │   ├── train_federated.py         # Script for federated learning training
+│
+├── logs/                              # Logs generated during training and evaluation
+│   ├── server.log                     # Logs for server-side operations
+│   ├── client1.log                    # Logs for Client 1 operations
+│   ├── client2.log                    # Logs for Client 2 operations
+│   ├── client3.log                    # Logs for Client 3 operations
+│
+├── results/                           # Directory to save experiment results
+│   ├── federated_results.csv          # Performance metrics from federated learning
+│   ├── centralized_results.csv        # Performance metrics from centralized learning
+│   ├── graphs/                        # Visualization of results
+│
+├── config/                            # Configuration files for experiments and training
+│   ├── server_config.yaml             # Server configuration
+│   ├── client_config.yaml             # Client configuration
+│   ├── model_config.yaml              # Model hyperparameters and architecture
+│
+├── scripts/                           # Utility scripts for data processing, etc.
+│   ├── preprocess_data.py             # Script for preprocessing the dataset
+│   ├── split_data.py                  # Script for splitting data across clients
+│
+├── README.md                          # Project overview and setup instructions
+├── requirements.txt                   # Required Python packages
+└── .gitignore                         # Files and directories to ignore in Git
