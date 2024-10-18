@@ -1,11 +1,60 @@
+
 import numpy as np
 import torch
 import random
 from tqdm import trange
+'''
+m,v in this file: 
+In the context of your `RBM` class implementation, the variables `m` and `v` are used as part of the Adam optimization algorithm, specifically for maintaining the first and second moment estimates of the gradients. Here’s a breakdown of what they represent:
 
+1. **`m`**: This variable represents the first moment estimate, which is the exponential moving average of the gradients. It captures the mean of the gradients over time. The update formula for `m` is:
+   \[
+   m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t
+   \]
+   where:
+   - \(m_t\) is the current first moment estimate,
+   - \(m_{t-1}\) is the previous first moment estimate,
+   - \(g_t\) is the current gradient,
+   - \(\beta_1\) is the decay rate for the first moment (typically set to 0.9).
+
+2. **`v`**: This variable represents the second moment estimate, which is the exponential moving average of the squared gradients. It captures the variance of the gradients over time. The update formula for `v` is:
+   \[
+   v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2
+   \]
+   where:
+   - \(v_t\) is the current second moment estimate,
+   - \(v_{t-1}\) is the previous second moment estimate,
+   - \(g_t^2\) is the square of the current gradient,
+   - \(\beta_2\) is the decay rate for the second moment (typically set to 0.999).
+
+### Initialization in Your Code
+
+In your `RBM` class, `m` and `v` are initialized as lists with three elements, corresponding to the three parameters that the model will optimize (weights `W`, visible biases `vb`, and hidden biases `hb`). This structure allows for separate moment estimates for each of these parameters:
+
+```python
+self.m = [0, 0, 0]  # First moment estimates for W, vb, hb
+self.v = [0, 0, 0]  # Second moment estimates for W, vb, hb
+```
+
+### Usage in Adam Optimization
+
+When you call the `adam` method during the `update` phase of training, it calculates the moment estimates and then computes the adaptive learning rate based on these estimates. Here’s the relevant part of your code:
+
+```python
+if self.optimizer == 'adam':
+    dW = self.adam(dW, epoch, 0)
+    dvb = self.adam(dvb, epoch, 1)
+    dhb = self.adam(dhb, epoch, 2)
+```
+
+Here, `adam` is called for each gradient, and it updates `m` and `v` accordingly for each parameter during the training process. 
+
+This mechanism allows the Adam optimizer to adaptively adjust the learning rates for each parameter based on their individual gradient histories, leading to more efficient training.
+
+'''
 class RBM:
-
-	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=32, k=3, optimizer='adam', gpu=False, savefile=None, early_stopping_patience=5):
+    
+	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=32, k=3, optimizer='adam', gpu=True, savefile=None, early_stopping_patience=5):
 		self.mode = mode # bernoulli or gaussian RBM
 		self.n_hidden = n_hidden #  Number of hidden nodes
 		self.n_visible = n_visible # Number of visible nodes
@@ -14,18 +63,23 @@ class RBM:
 		self.batch_size = batch_size
 		self.k = k
 		self.optimizer = optimizer
-		self.beta_1=0.9
-		self.beta_2=0.999
-		self.epsilon=1e-07
+		self.beta_1 = 0.9
+		self.beta_2 = 0.999
+		self.epsilon = 1e-7
+
+		'''What is this m, v ??? '''
 		self.m = [0, 0, 0]
 		self.v = [0, 0, 0]
 		self.m_batches = {0:[], 1:[], 2:[]}
 		self.v_batches = {0:[], 1:[], 2:[]}
+
 		self.savefile = savefile
 		self.early_stopping_patience = early_stopping_patience
 		self.stagnation = 0
 		self.previous_loss_before_stagnation = 0
 		self.progress = []
+
+
 
 		if torch.cuda.is_available() and gpu==True:  
 			dev = "cuda:0" 
@@ -33,138 +87,14 @@ class RBM:
 			dev = "cpu"  
 		self.device = torch.device(dev)
 
-		# Initialize weights and biases
-		std = 4 * np.sqrt(6. / (self.n_visible + self.n_hidden))
-		self.W = torch.normal(mean=0, std=std, size=(self.n_hidden, self.n_visible))
-		self.vb = torch.zeros(size=(1, self.n_visible), dtype=torch.float32)
-		self.hb = torch.zeros(size=(1, self.n_hidden), dtype=torch.float32)
+
+		# Xavier initialization: std =  4*(6 / root(input  + ouput)) 
+		std = 4 * np.sqrt(6.0 / (self.n_visible + self.n_hidden))
+		self.W = torch.normal(mean = 0, std = std, size = (self.n_hidden , self.n_visible))
+		self.vb = torch.zeros(size = (1, n_visible), dtype = torch.float32)
+		self.hb = torch.zeros(size = (1, n_hidden), dtype = torch.float32)
+
 
 		self.W = self.W.to(self.device)
 		self.vb = self.vb.to(self.device)
 		self.hb = self.hb.to(self.device)
-		
-	def sample_h(self, x):
-		wx = torch.mm(x, self.W.t())
-		activation = wx + self.hb
-		p_h_given_v = torch.sigmoid(activation)
-		if self.mode == 'bernoulli':
-			return p_h_given_v, torch.bernoulli(p_h_given_v)
-		else:
-			return p_h_given_v, torch.add(p_h_given_v, torch.normal(mean=0, std=1, size=p_h_given_v.shape))
-
-	def sample_v(self, y):
-		wy = torch.mm(y, self.W)
-		activation = wy + self.vb
-		p_v_given_h =torch.sigmoid(activation)
-		if self.mode == 'bernoulli':
-			return p_v_given_h, torch.bernoulli(p_v_given_h)
-		else:
-			return p_v_given_h, torch.add(p_v_given_h, torch.normal(mean=0, std=1, size=p_v_given_h.shape))
-	
-	def adam(self, g, epoch, index):
-		self.m[index] = self.beta_1 * self.m[index] + (1 - self.beta_1) * g
-		self.v[index] = self.beta_2 * self.v[index] + (1 - self.beta_2) * torch.pow(g, 2)
-
-		m_hat = self.m[index] / (1 - np.power(self.beta_1, epoch)) + (1 - self.beta_1) * g / (1 - np.power(self.beta_1, epoch))
-		v_hat = self.v[index] / (1 - np.power(self.beta_2, epoch))
-		return m_hat / (torch.sqrt(v_hat) + self.epsilon)
-
-	def update(self, v0, vk, ph0, phk, epoch):
-		dW = (torch.mm(v0.t(), ph0) - torch.mm(vk.t(), phk)).t()
-		dvb = torch.sum((v0 - vk), 0)
-		dhb = torch.sum((ph0 - phk), 0)
-
-		if self.optimizer == 'adam':
-			dW = self.adam(dW, epoch, 0)
-			dvb = self.adam(dvb, epoch, 1)
-			dhb = self.adam(dhb, epoch, 2)
-
-		self.W += self.lr * dW
-		self.vb += self.lr * dvb
-		self.hb += self.lr * dhb
-
-	def train(self, dataset):
-		dataset = dataset.to(self.device)
-		learning = trange(self.epochs, desc=str('Starting...'))
-		for epoch in learning:
-			train_loss = 0
-			counter = 0
-			for batch_start_index in range(0, dataset.shape[0]-self.batch_size, self.batch_size):
-				vk = dataset[batch_start_index:batch_start_index+self.batch_size]
-				v0 = dataset[batch_start_index:batch_start_index+self.batch_size]
-				ph0, _ = self.sample_h(v0)
-
-				for k in range(self.k):
-					_, hk = self.sample_h(vk)
-					_, vk = self.sample_v(hk)
-				phk, _ = self.sample_h(vk)
-				self.update(v0, vk, ph0, phk, epoch+1)
-				train_loss += torch.mean(torch.abs(v0-vk))
-				counter += 1
-			
-			self.progress.append(train_loss.item()/counter)
-			details = {'epoch': epoch+1, 'loss': round(train_loss.item()/counter, 4)}
-			learning.set_description(str(details))
-			learning.refresh()
-			
-			if train_loss.item()/counter > self.previous_loss_before_stagnation and epoch>self.early_stopping_patience+1:
-				self.stagnation += 1
-				if self.stagnation == self.early_stopping_patience-1:
-					learning.close()
-					print("Not Improving the stopping training loop.")
-					break
-			else:
-				self.previous_loss_before_stagnation = train_loss.item()/counter
-				self.stagnation = 0
-		learning.close()
-		if self.savefile is not None:
-			model = {'W':self.W, 'vb':self.vb, 'hb':self.hb}
-			torch.save(model, self.savefile)
-
-	def load_rbm(self, savefile):
-		loaded = torch.load(savefile)
-		self.W = loaded['W']
-		self.vb = loaded['vb']
-		self.hb = loaded['hb']
-
-		self.W = self.W.to(self.device)
-		self.vb = self.vb.to(self.device)
-		self.hb = self.hb.to(self.device)
-
-
-
-def trial_dataset():
-	dataset = []
-	for _ in range(1000):
-		t = []
-		for _ in range(10):
-			if random.random()>0.75:
-				t.append(0)
-			else:
-				t.append(1)
-		dataset.append(t)
-
-	for _ in range(1000):
-		t = []
-		for _ in range(10):
-			if random.random()>0.75:
-				t.append(1)
-			else:
-				t.append(0)
-		dataset.append(t)
-
-	dataset = np.array(dataset, dtype=np.float32)
-	np.random.shuffle(dataset)
-	dataset = torch.from_numpy(dataset)
-	return dataset
-
-if __name__ == '__main__':
-	
-	dataset = trial_dataset()
-
-	rbm = RBM(10, 100, epochs=50, mode='bernoulli', lr=0.001, optimizer='adam', gpu=True, savefile='save_example.pt', early_stopping_patience=50)
-	print("Before Training:", rbm.vb)
-	rbm.train(dataset)
-	print("After Training:", rbm.vb)
-	rbm.load_rbm('save_example.pt')
-	print("After Loading:", rbm.vb)
