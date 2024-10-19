@@ -7,6 +7,7 @@ from tqdm import trange
 class RBM:
     
 	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=32, k=3, optimizer='adam', gpu=True, savefile=None, early_stopping_patience=5):
+
 		self.mode = mode # bernoulli or gaussian RBM
 		self.n_hidden = n_hidden #  Number of hidden nodes
 		self.n_visible = n_visible # Number of visible nodes
@@ -31,8 +32,6 @@ class RBM:
 		self.previous_loss_before_stagnation = 0
 		self.progress = []
 
-
-
 		if torch.cuda.is_available() and gpu==True:  
 			dev = "cuda:0" 
 			print(f"Using device : {dev}")
@@ -42,7 +41,7 @@ class RBM:
 
 		self.device = torch.device(dev)
 
-		# Xavier initialization: std =  4*(6 / root(input  + ouput)) 
+		# Xavier initialization: std =  4 * (6 / root(input  + output)) 
 		std = 4 * np.sqrt(6.0 / (self.n_visible + self.n_hidden))
 		self.W = torch.normal(mean = 0, std = std, size = (self.n_hidden , self.n_visible))  # (n_hidden x n_visible) weight matrix
 		self.vb = torch.zeros(size = (1, n_visible), dtype = torch.float32) #visible layer bias -- (1 x n_visible)
@@ -398,5 +397,7 @@ class RBM:
 
 
 '''
+
 So, it it working! 
+
 '''
