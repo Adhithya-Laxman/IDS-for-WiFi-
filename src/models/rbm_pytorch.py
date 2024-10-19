@@ -69,7 +69,7 @@ class RBM:
 		m_hat = self.m[index] / (1 - np.power(self.beta_1, epoch)) + (1 - self.beta_1) * g / (1 - np.power(self.beta_1, epoch))
 		v_hat = self.v[index] / (1 - np.power(self.beta_2, epoch))
 		return m_hat / (torch.sqrt(v_hat) + self.epsilon)
-
+    
 	def update(self, v0, vk, ph0, phk, epoch):
 		dW = (torch.mm(v0.t(), ph0) - torch.mm(vk.t(), phk)).t()
 		dvb = torch.sum((v0 - vk), 0)
