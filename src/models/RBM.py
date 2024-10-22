@@ -354,9 +354,9 @@ class RBM:
 					learning.close()  # Stop progress bar
 					print("Not improving, stopping training loop.")
 					break
-				else:
-					self.previous_loss_before_stagnation = train_loss.item() / counter  # Update loss for next comparison
-					self.stagnation = 0  # Reset stagnation counter
+			else:
+				self.previous_loss_before_stagnation = train_loss.item() / counter  # Update loss for next comparison
+				self.stagnation = 0  # Reset stagnation counter as there is improvement in the loss value
 
 		print("All epochs completed")
 		learning.close()  # Close the progress bar
@@ -403,7 +403,9 @@ So, it it working!
 '''
 
 
-'''
+
+
+
 def trial_dataset():
 	dataset = []
 	for _ in range(1000):
@@ -440,4 +442,3 @@ if __name__ == '__main__':
 	rbm.load_rbm('save_example.pt')
 	print("After Loading:", rbm.vb)
 
-'''
