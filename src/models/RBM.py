@@ -7,7 +7,6 @@ from tqdm import trange
 class RBM:
     
 	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=32, k=3, optimizer='adam', gpu=True, savefile=None, early_stopping_patience=5):
-
 		self.mode = mode # bernoulli or gaussian RBM
 		self.n_hidden = n_hidden #  Number of hidden nodes
 		self.n_visible = n_visible # Number of visible nodes
@@ -21,7 +20,7 @@ class RBM:
 		self.epsilon = 1e-7
 
 		'''What is this m, v ??? '''
-		self.m = [0, 0, 0]
+		self.m = [0, 0, 0] #[W, hb, vb]
 		self.v = [0, 0, 0]
 		self.m_batches = {0:[], 1:[], 2:[]}
 		self.v_batches = {0:[], 1:[], 2:[]}
@@ -41,9 +40,11 @@ class RBM:
 
 		self.device = torch.device(dev)
 
-		# Xavier initialization: std =  4 * (6 / root(input  + output)) 
+		# 'Xavier' initialization: std =  4 * (6 / root(input  + output)) 
 		std = 4 * np.sqrt(6.0 / (self.n_visible + self.n_hidden))
+		
 		self.W = torch.normal(mean = 0, std = std, size = (self.n_hidden , self.n_visible))  # (n_hidden x n_visible) weight matrix
+		print(self.W.shape)
 		self.vb = torch.zeros(size = (1, n_visible), dtype = torch.float32) #visible layer bias -- (1 x n_visible)
 		self.hb = torch.zeros(size = (1, n_hidden), dtype = torch.float32) #hidden layer bias -- (1 x n_hidden)
 

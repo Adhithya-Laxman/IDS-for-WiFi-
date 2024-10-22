@@ -3,108 +3,198 @@ import torch
 import random
 from tqdm import trange
 from RBM import RBM
+import pandas as pd
+import torch.optim as optim
+import torch.nn as nn
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 class DBN:
-	def __init__(self, input_size, layers, mode='bernoulli', gpu=False, k=5, savefile=None):
-		self.layers = layers
-		self.input_size = input_size
-		self.layer_parameters = [{'W':None, 'hb':None, 'vb':None} for _ in range(len(layers))]
-		self.k = k
-		self.mode = mode
-		self.savefile = savefile
+    def __init__(self, input_size, layers, mode = 'bernoulli', gpu = False, k = 5, savefile = None):
+        # K = ? 
+        self.layers = layers #RBM Layers -- it stores a list with each element specifying the number of hidden units in each RBM layer
+        self.input_size = input_size #Batch input size to DBN
+        self.layer_parameters = [{'W' : None, 'hb' : None, 'vb' : None} for _ in range(len(layers))]
+        self.k = k
+        self.mode = mode
+        self.savefile = savefile
 
-	def sample_v(self, y, W, vb):
-		wy = torch.mm(y, W)
-		activation = wy + vb
-		p_v_given_h =torch.sigmoid(activation)
-		if self.mode == 'bernoulli':
-			return p_v_given_h, torch.bernoulli(p_v_given_h)
-		else:
-			return p_v_given_h, torch.add(p_v_given_h, torch.normal(mean=0, std=1, size=p_v_given_h.shape))
+    # v, h -- same for both RBM and DBN
 
-	def sample_h(self, x, W, hb):
-		wx = torch.mm(x, W.t())
-		activation = wx + hb
-		p_h_given_v = torch.sigmoid(activation)
-		if self.mode == 'bernoulli':
-			return p_h_given_v, torch.bernoulli(p_h_given_v)
-		else:
-			return p_h_given_v, torch.add(p_h_given_v, torch.normal(mean=0, std=1, size=p_h_given_v.shape))
+    def sample_v(self, y, W, vb):
+        wy = torch.mm(y, W)
+        activation = wy + vb
+        p_v_given_h =torch.sigmoid(activation)
+        if self.mode == 'bernoulli':
+            return p_v_given_h, torch.bernoulli(p_v_given_h)
+        else:
+            return p_v_given_h, torch.add(p_v_given_h, torch.normal(mean=0, std=1, size=p_v_given_h.shape))
 
-	def generate_input_for_layer(self, index, x):
-		if index>0:
-			x_gen = []
-			for _ in range(self.k):
-				x_dash = x.clone()
-				for i in range(index):
-					_, x_dash = self.sample_h(x_dash, self.layer_parameters[i]['W'], self.layer_parameters[i]['hb'])
-				x_gen.append(x_dash)
+    def sample_h(self, x, W, hb):
+        wx = torch.mm(x, W.t())
+        activation = wx + hb
+        p_h_given_v = torch.sigmoid(activation)
+        if self.mode == 'bernoulli':
+            return p_h_given_v, torch.bernoulli(p_h_given_v)
+        else:
+            return p_h_given_v, torch.add(p_h_given_v, torch.normal(mean=0, std=1, size=p_h_given_v.shape))
+    '''
+    Stacking and Averaging: After generating k versions of x_dash, they are stacked together using torch.stack(x_gen) and then averaged with torch.mean(x_dash, dim=0). The 
+    resulting x_dash is a smoother or more general representation of the input to the next layer, which may help stabilize training or reduce the noise from the sampling process.
 
-			x_dash = torch.stack(x_gen)
-			x_dash = torch.mean(x_dash, dim=0)
-		else:
-			x_dash = x.clone()
-		return x_dash
 
-	def train_DBN(self, x):
-		for index, layer in enumerate(self.layers):
-			if index==0:
-				vn = self.input_size
-			else:
-				vn = self.layers[index-1]
-			hn = self.layers[index]
+    '''
+    '''
+    In your generate_input_for_layer function, after repeatedly sampling inputs using the sample_h function, the code stacks and averages the samples. Let’s break down what's happening with an example.
 
-			rbm = RBM(vn, hn, epochs=100, mode='bernoulli', lr=0.0005, k=10, batch_size=128, gpu=True, optimizer='adam', early_stopping_patience=10)
-			x_dash = self.generate_input_for_layer(index, x)
-			rbm.train(x_dash)
-			self.layer_parameters[index]['W'] = rbm.W.cpu()
-			self.layer_parameters[index]['hb'] = rbm.hb.cpu()
-			self.layer_parameters[index]['vb'] = rbm.vb.cpu()
-			print("Finished Training Layer:", index, "to", index+1)
-		if self.savefile is not None:
-			torch.save(self.layer_parameters, self.savefile)
+    1. Sampling Multiple Times (self.k samples):
+    You sample the input x multiple times (self.k times) using the sample_h function, which outputs x_dash for each iteration. This process is repeated for self.k times to generate k different versions of x_dash, which are then stored in the list x_gen.
 
-	def reconstructor(self, x):
-		x_gen = []
-		for _ in range(self.k):
-			x_dash = x.clone()
-			for i in range(len(self.layer_parameters)):
-				_, x_dash = self.sample_h(x_dash, self.layer_parameters[i]['W'], self.layer_parameters[i]['hb'])
-			x_gen.append(x_dash)
-		x_dash = torch.stack(x_gen)
-		x_dash = torch.mean(x_dash, dim=0)
+    2. Stacking the Samples:
+    After k samples are generated and stored in x_gen, the following line:
 
-		y = x_dash
+    python
+    Copy code
+    x_dash = torch.stack(x_gen)
+    Explanation:
 
-		y_gen = []
-		for _ in range(self.k):
-			y_dash = y.clone()
-			for i in range(len(self.layer_parameters)):
-				i = len(self.layer_parameters)-1-i
-				_, y_dash = self.sample_v(y_dash, self.layer_parameters[i]['W'], self.layer_parameters[i]['vb'])
-			y_gen.append(y_dash)
-		y_dash = torch.stack(y_gen)
-		y_dash = torch.mean(y_dash, dim=0)
+    torch.stack(x_gen) combines the list of tensors (x_gen) into a single tensor. Each tensor in x_gen (i.e., each x_dash) has the same shape, say (n, m), where n is the batch size (or number of data points) and m is the number of features (or units).
+    After stacking, x_dash becomes a 3D tensor of shape (k, n, m), where k is the number of samples, n is the batch size, and m is the number of features.
+    3. Averaging the Stacked Samples:
+    Next, you average the stacked samples along the first dimension (i.e., the dimension corresponding to k samples):
 
-		return y_dash, x_dash
+    python
+    Copy code
+    x_dash = torch.mean(x_dash, dim=0)
+    Explanation:
 
-	def initialize_model(self):
-		print("The Last layer will not be activated. The rest are activated using the Sigoid Function")
-		modules = []
-		for index, layer in enumerate(self.layer_parameters):
-			modules.append(torch.nn.Linear(layer['W'].shape[1], layer['W'].shape[0]))
-			if index < len(self.layer_parameters) - 1:
-				modules.append(torch.nn.Sigmoid())
-		model = torch.nn.Sequential(*modules)
+    This takes the mean across the k samples for each element in the (n, m) tensor.
+    The result is a 2D tensor of shape (n, m), where each value in the new x_dash is the average of the corresponding values across the k samples.
+    This averaging process is used to smooth the input by reducing the variance introduced by individual samples. The resulting x_dash is less noisy and more robust before being passed to the next layer.
 
-		for layer_no, layer in enumerate(model):
-			if layer_no//2 == len(self.layer_parameters)-1:
-				break
-			if layer_no%2 == 0:
-				model[layer_no].weight = torch.nn.Parameter(self.layer_parameters[layer_no//2]['W'])
-				model[layer_no].bias = torch.nn.Parameter(self.layer_parameters[layer_no//2]['hb'])
+    Example with Shapes:
+    Let's assume:
 
-		return model
+    x is of shape (2, 3) (batch size 2, features 3).
+    self.k = 3 (3 samples).
+    For each iteration, sample_h generates a new version of x_dash. After 3 iterations, x_gen will contain 3 tensors, each of shape (2, 3).
+
+    torch.stack(x_gen) will result in a 3D tensor of shape (3, 2, 3):
+
+    lua
+    Copy code
+    [[[x11_1, x12_1, x13_1],  -> First sample
+    [x21_1, x22_1, x23_1]],
+
+    [[x11_2, x12_2, x13_2],  -> Second sample
+    [x21_2, x22_2, x23_2]],
+
+    [[x11_3, x12_3, x13_3],  -> Third sample
+    [x21_3, x22_3, x23_3]]]
+    torch.mean(x_dash, dim=0) will compute the mean across the first dimension (sample dimension), resulting in a 2D tensor of shape (2, 3):
+
+    lua
+    Copy code
+    [[mean(x11_1, x11_2, x11_3), mean(x12_1, x12_2, x12_3), mean(x13_1, x13_2, x13_3)],
+    [mean(x21_1, x21_2, x21_3), mean(x22_1, x22_2, x22_3), mean(x23_1, x23_2, x23_3)]]
+    This averaging ensures the final input x_dash to the next layer is a smoothed version, reducing the effects of noise from individual sampling steps.
+    '''
+    def generate_input_for_layer(self, layer_number, x):
+        # x -- input to the layer
+        if layer_number > 0: 
+            x_gen = []
+            for _ in range(self.k):
+                x_dash = x.clone()
+                for i in range(layer_number):
+                    _, x_dash = self.sample_h(x_dash, self.layer_parameters[i]['W'], self.layer_parameters[i]['hb'])
+                
+                x_gen.append(x_dash)
+            
+            x_dash = torch.stack(x_gen)
+            x_dash = torch.mean(x_dash, dim = 0)
+        else:
+            x_dash = x.clone()
+        return x_dash
+
+    def train_DBN(self, x):
+        # x -- input to the DBN (Dataset)
+
+        for index, layer in enumerate(self.layers):
+            # Find the number of visible units for current RBM Layer
+            if index == 0:
+                vn = self.input_size #If it it the first RBM give all the inputs (154 components) as the number of visible units vn
+            else:
+                vn = self.layers[index - 1] #Else the number of visible units = number of hidden units in the previous RBM layer
+
+            hn = self.layers[index] #Initialize number of hidden units for the current RBM layer
+
+            # Generate and train an RBM for this layer
+            
+            rbm = RBM(n_visible = vn, n_hidden = hn, mode='bernoulli',lr=0.0005, k=10, batch_size=128, gpu=True, optimizer='adam', early_stopping_patience=10, epochs=20)
+            # Generate input layers for current RBM layer
+            x_dash = self.generate_input_for_layer(index, x=x)
+            # Train the RBM
+            rbm.train(x_dash)
+            # Update the layer parameters after training
+            self.layer_parameters[index]['W'] = rbm.W.cpu()
+            self.layer_parameters[index]['hb'] = rbm.hb.cpu()
+            self.layer_parameters[index]['vb'] = rbm.vb.cpu()
+
+            print("FINISHED TRAINING LAYER: ", index, "TO", index+1)
+
+        if self.savefile is not None:
+            torch.save(self.layer_parameters, self.savefile)
+
+    def reconstructor(self, x):
+        '''
+            A dummy function jus ton display the hidden and regenerated unit at each step
+        '''
+        x_gen = []  
+        for _ in range(self.k):
+            x_dash = x.clone()
+            for i in range(len(self.layer_parameters)):
+                _, x_dash = self.sample_h(x_dash, self.layer_parameters[i]['W'], self.layer_parameters[i]['hb'])
+            x_gen.append(x_dash)
+        x_dash = torch.stack(x_gen)
+        x_dash = torch.mean(x_dash, dim=0)
+
+        y = x_dash
+
+        y_gen = []
+        for _ in range(self.k):
+            y_dash = y.clone()
+            for i in range(len(self.layer_parameters)):
+                i = len(self.layer_parameters)-1-i
+                _, y_dash = self.sample_v(y_dash, self.layer_parameters[i]['W'], self.layer_parameters[i]['vb'])
+            y_gen.append(y_dash)
+        y_dash = torch.stack(y_gen)
+        y_dash = torch.mean(y_dash, dim=0)
+
+        return y_dash, x_dash
+    
+    def initialize_model(self):
+        # Construct a FNN from the pretrained RBM weights and return the neural network
+        print("The Last layer will not be activated. The rest are activated using the Sigmoid Function")
+
+        modules = []
+        for index, layer in enumerate(self.layer_parameters):
+            modules.append(torch.nn.Linear(layer['W'].shape[1], layer['W'].shape[0]))
+            if index < len(self.layer_parameters) - 1:
+                modules.append(torch.nn.Sigmoid())
+        
+        model = torch.nn.Sequential(*modules)
+        for layer_no, layer in enumerate(model):
+            if layer_no // 2 == len(self.layer_parameters) - 1:
+                break
+            if layer_no%2 == 0:
+                model[layer_no].weight = torch.nn.Parameter(self.layer_parameters[layer_no//2]['W'])
+                model[layer_no].bias = torch.nn.Parameter(self.layer_parameters[layer_no//2]['hb'])
+
+        return model
+
+
+
 
 def trial_dataset():
 	dataset = []
@@ -130,20 +220,59 @@ def trial_dataset():
 	np.random.shuffle(dataset)
 	dataset = torch.from_numpy(dataset)
 	return dataset
+def train_classifier(model, dataset, labels, epochs=100, batch_size=128):
+    criterion = torch.nn.CrossEntropyLoss()  # Use CrossEntropyLoss for softmax
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+    for epoch in range(epochs):
+        model.train()
+        for i in range(0, len(dataset), batch_size):
+            batch_x = dataset[i:i + batch_size]
+            batch_y = labels[i:i + batch_size]
+
+            optimizer.zero_grad()  # Zero gradients
+            outputs = model(batch_x)  # Forward pass
+            loss = criterion(outputs, batch_y)  # Compute loss
+            loss.backward()  # Backward pass
+            optimizer.step()  # Update weights
+
+        if (epoch + 1) % 10 == 0:
+            print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
+
+
+
+def train_classifier(model, dataset, labels, epochs=100, batch_size=128):
+    criterion = torch.nn.CrossEntropyLoss()  # Use CrossEntropyLoss for softmax
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    for epoch in range(epochs):
+        model.train()
+        for i in range(0, len(dataset), batch_size):
+            batch_x = dataset[i:i + batch_size]
+            batch_y = labels[i:i + batch_size]
+
+            optimizer.zero_grad()  # Zero gradients
+            outputs = model(batch_x)  # Forward pass
+            loss = criterion(outputs, batch_y)  # Compute loss
+            loss.backward()  # Backward pass
+            optimizer.step()  # Update weights
+
+        if (epoch + 1) % 10 == 0:
+            print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
+
+    
 if __name__ == '__main__': 
-	dataset = trial_dataset()
+	dataset = torch.from_numpy(pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set1_10000.csv').astype('float32').to_numpy())
+	layers = [149, 128, 64, 32, 16, 8, 4]
 
-	layers = [7, 5, 2]
-
-	dbn = DBN(10, layers)
+	dbn = DBN(149, layers)
 	dbn.train_DBN(dataset)
 
 	model = dbn.initialize_model()
 
-	y = dbn.reconstructor(dataset)
+	y, _ = dbn.reconstructor(dataset)
 	print('\n\n\n')
 	print("MAE of an all 0 reconstructor:", torch.mean(dataset).item())
 	print("MAE between reconstructed and original sample:", torch.mean(torch.abs(y - dataset)).item())
-
-
+    # Training the classifier
+    # train_classifier(model, dataset, labels)
