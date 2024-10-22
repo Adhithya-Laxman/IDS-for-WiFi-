@@ -173,7 +173,8 @@ class RBM:
 		self.v[index] = self.beta_2 * self.v[index] + (1 - self.beta_2) * torch.pow(g, 2)
 
 		# Bias-corrected first moment estimate
-		m_hat = self.m[index] / (1 - np.power(self.beta_1, epoch)) + (1 - self.beta_1) * g / (1 - np.power(self.beta_1, epoch))
+		m_hat = self.m[index] / (1 - np.power(self.beta_1, epoch)) 
+		# + (1 - self.beta_1) * g / (1 - np.power(self.beta_1, epoch))
 
 		# Bias-corrected second moment estimate
 		v_hat = self.v[index] / (1 - np.power(self.beta_2, epoch))
