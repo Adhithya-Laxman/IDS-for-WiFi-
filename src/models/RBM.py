@@ -5,7 +5,6 @@ import random
 from tqdm import trange
 
 class RBM:
-    
 	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=32, k=3, optimizer='adam', gpu=True, savefile=None, early_stopping_patience=5):
 		self.mode = mode # bernoulli or gaussian RBM
 		self.n_hidden = n_hidden #  Number of hidden nodes
@@ -396,16 +395,11 @@ class RBM:
 		self.hb = self.hb.to(self.device)
 
 
-
-
 '''
 
 So, it it working! 
 
 '''
-
-
-
 
 
 def trial_dataset():
@@ -443,4 +437,5 @@ if __name__ == '__main__':
 	print("After Training:", rbm.vb)
 	rbm.load_rbm('save_example.pt')
 	print("After Loading:", rbm.vb)
+
 

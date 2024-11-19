@@ -245,24 +245,24 @@ def train_FNN(model, dataloader, num_epochs=10):
 
 
 
-def train_classifier(model, dataset, labels, epochs=100, batch_size=128):
-    criterion = torch.nn.CrossEntropyLoss()  # Use CrossEntropyLoss for softmax
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+# def train_classifier(model, dataset, labels, epochs=100, batch_size=128):
+#     criterion = torch.nn.CrossEntropyLoss()  # Use CrossEntropyLoss for softmax
+#     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    for epoch in range(epochs):
-        model.train()
-        for i in range(0, len(dataset), batch_size):
-            batch_x = dataset[i:i + batch_size]
-            batch_y = labels[i:i + batch_size]
+#     for epoch in range(epochs):
+#         model.train()
+#         for i in range(0, len(dataset), batch_size):
+#             batch_x = dataset[i:i + batch_size]
+#             batch_y = labels[i:i + batch_size]
 
-            optimizer.zero_grad()  # Zero gradients
-            outputs = model(batch_x)  # Forward pass
-            loss = criterion(outputs, batch_y)  # Compute loss
-            loss.backward()  # Backward pass
-            optimizer.step()  # Update weights
+#             optimizer.zero_grad()  # Zero gradients
+#             outputs = model(batch_x)  # Forward pass
+#             loss = criterion(outputs, batch_y)  # Compute loss
+#             loss.backward()  # Backward pass
+#             optimizer.step()  # Update weights
 
-        if (epoch + 1) % 10 == 0:
-            print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
+#         if (epoch + 1) % 10 == 0:
+#             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
 
 
 # Training function with both train and test accuracy tracking
@@ -384,8 +384,53 @@ def train_classifier_manual(model, dataset, labels, epochs=100, batch_size=128, 
             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {epoch_loss / (len(dataset) // batch_size):.4f}')
 
 
+import matplotlib.pyplot as plt
+import networkx as nx
+
+# Function to plot the RBM layers
+def plot_rbm_layers(dbn):
+    fig, axes = plt.subplots(len(dbn.layers), 1, figsize=(5, 10))
+    for i, ax in enumerate(axes):
+        ax.set_title(f"RBM Layer {i+1}: {dbn.layers[i]} Hidden Units")
+        ax.imshow(dbn.layer_parameters[i]['W'].cpu().detach().numpy(), aspect='auto', cmap='viridis')
+        ax.set_xlabel('Visible Units')
+        ax.set_ylabel('Hidden Units')
+    plt.tight_layout()
+    plt.show()
+
+# Function to plot the FNN model
+def plot_fnn_model(fnn_model):
+    graph = nx.DiGraph()
+
+    # Add nodes for each layer in the FNN
+    for i, layer in enumerate(fnn_model):
+        if isinstance(layer, torch.nn.Linear):
+            graph.add_node(i, label=f"Layer {i}: {layer.in_features} -> {layer.out_features}")
+            if i > 0:
+                graph.add_edge(i - 1, i)  # Connect previous layer to the current one
+
+    # Draw the graph
+    pos = nx.spring_layout(graph)
+    labels = nx.get_node_attributes(graph, 'label')
+    plt.figure(figsize=(8, 6))
+    nx.draw(graph, pos, with_labels=True, labels=labels, node_size=3000, node_color='skyblue', font_size=10, font_weight='bold', edge_color='gray')
+    plt.title("FNN Architecture")
+    plt.show()
+
+# Assuming DBN and FNN are already defined and trained
+# After training the DBN, you can visualize the RBM layers and the FNN as follows:
+
+# Create a DBN instance and train it (this part is already in your code)
+# dbn = DBN(input_size=154, layers=[100, 50, 25])
+# dbn.train_DBN(dataset)  # Pass your dataset here
+
+
+from torchviz import make_dot
+
 if __name__ == '__main__':
     # Load dataset
+
+    
     dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set1_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
@@ -408,5 +453,21 @@ if __name__ == '__main__':
     model = dbn.initialize_model()
     print("FINAL FNN MODEL TRAINING...")
     # Train the model with both train and test accuracy tracking
-    # train_and_evaluate(model, train_loader, test_loader, num_epochs=10)
-    train_classifier_manual(model, train_loader, test_loader, num_epochs=10)
+    train_and_evaluate(model, train_loader, test_loader, num_epochs=10)
+    # train_classifier_manual(model, train_loader, test_loader, num_epochs=10)
+    # Plot the RBM layers
+    # plot_rbm_layers(dbn)
+
+    # # Initialize the FNN model from the DBN layers and plot the FNN model
+    # fnn_model = dbn.initialize_model()
+    # plot_fnn_model(fnn_model)
+    # make_dot(model, model.parameters())
+
+    # sample_input = torch.randn(1, 148)  # Adjust dimensions based on your input size
+    # sample_output = model(sample_input)
+
+    # # Create the computational graph and visualize it
+    # dot = make_dot(sample_output, params=dict(model.named_parameters()))
+    # dot.render("model_visualization", format="png")  # Optionally save the visualization as a file
+
+    
