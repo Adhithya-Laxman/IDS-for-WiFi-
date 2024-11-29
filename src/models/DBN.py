@@ -431,7 +431,7 @@ if __name__ == '__main__':
     # Load dataset
 
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set1_10000.csv').astype('float32')
+    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set2_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
 
@@ -458,16 +458,13 @@ if __name__ == '__main__':
     # Plot the RBM layers
     # plot_rbm_layers(dbn)
 
-    # # Initialize the FNN model from the DBN layers and plot the FNN model
-    # fnn_model = dbn.initialize_model()
-    # plot_fnn_model(fnn_model)
-    # make_dot(model, model.parameters())
-
-    # sample_input = torch.randn(1, 148)  # Adjust dimensions based on your input size
-    # sample_output = model(sample_input)
-
-    # # Create the computational graph and visualize it
-    # dot = make_dot(sample_output, params=dict(model.named_parameters()))
-    # dot.render("model_visualization", format="png")  # Optionally save the visualization as a file
+    save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
+    torch.save({
+        'model_state_dict': model.state_dict(),  # Save the model's parameters
+        'dbn_layers': layers,                   # Save the DBN architecture
+        'input_size': 148                       # Save the input size for reconstruction
+    }, save_path)
+    
+    print(f"Trained DBN-RBM model saved at: {save_path}")
 
     

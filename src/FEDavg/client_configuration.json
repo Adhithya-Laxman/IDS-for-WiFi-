@@ -1,0 +1,20 @@
+{
+    "network_summary": {
+        "total_clients": 50,
+        "timestamp": "2024-11-29T06:21:00Z",
+        "clients": [
+            {
+                "client_id": "client_002",
+                "name": "Client Beta",
+                "instances_trained_last_iteration": 150,
+                "model_path": "C:\\Users\\Admin\\Desktop\\2105001\\IDS Project\\IDS-for-WiFi-\\src\\trained models\\dbn_rbm_model_CLIENT2.pth",
+                "last_updated": "2024-11-29T06:16:00Z"
+            }
+        ],
+        "last_iteration_summary": {
+            "total_instances_trained": 650,
+            "global_model_path": "C:\\Users\\Admin\\Desktop\\2105001\\IDS Project\\IDS-for-WiFi-\\src\\trained models\\GLOBAL_dbn_rbm_model.pth",
+            "last_updated": "2024-11-29T06:21:00Z"
+        }
+    }
+}
