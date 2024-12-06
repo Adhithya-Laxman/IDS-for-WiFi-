@@ -148,29 +148,51 @@ class DBN:
         if self.savefile is not None:
             torch.save(self.layer_parameters, self.savefile)
     
-    def initialize_dbn(self, model_path):
+    def initialize_dbn_from_server(self, model_path):
         """
         Load a pretrained DBN model from a file and initialize the DBN with the weights and biases.
 
         Args:
             model_path (str): Path to the saved DBN-RBM model file.
         """
+        import torch
+        
         print(f"Loading pretrained DBN model from: {model_path}")
         try:
-            # Load the saved model state dictionary
+            # Load the saved model checkpoint
             checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
             
-            # Extract layer weights and biases
+            # Extract model_state_dict
+            model_state_dict = checkpoint['model_state_dict']
+            
+            # Load visible layer biases from the checkpoint
+            visible_layer_biases = checkpoint.get('visible_layer_biases', None)
+            if visible_layer_biases is None:
+                raise KeyError("Visible layer biases ('visible_layer_biases') not found in the checkpoint.")
+
+            # Initialize DBN layers with the loaded weights and biases
             for i, layer in enumerate(self.layer_parameters):
-                layer['W'] = checkpoint[f'layer_{i}_W']
-                layer['hb'] = checkpoint[f'layer_{i}_hb']
-                layer['vb'] = checkpoint[f'layer_{i}_vb']
+                weight_key = f'{2 * i}.weight'  # Key format for weights
+                bias_key = f'{2 * i}.bias'     # Key format for biases
+                
+                if weight_key in model_state_dict and bias_key in model_state_dict:
+                    # Load weights and hidden biases for each layer
+                    layer['W'] = model_state_dict[weight_key].numpy()  # Convert to NumPy if needed
+                    layer['hb'] = model_state_dict[bias_key].numpy()   # Convert to NumPy if needed
+                    
+                    # Load the visible bias (vb) from the visible_layer_biases list
+                    if i < len(visible_layer_biases):
+                        layer['vb'] = visible_layer_biases[i]  # Get vb for the current layer
+                    else:
+                        # If visible bias is not available, initialize with zeros
+                        layer['vb'] = torch.zeros(layer['W'].shape[1]).numpy()  # Zero-initialization for vb
+                else:
+                    raise KeyError(f"Keys {weight_key} and/or {bias_key} not found in model_state_dict.")
             
             print("Pretrained DBN model successfully loaded and initialized.")
         except Exception as e:
             print(f"Error loading DBN model: {e}")
             raise
-
 
     def reconstructor(self, x):
         '''
@@ -455,9 +477,8 @@ from torchviz import make_dot
 
 if __name__ == '__main__':
     # Load dataset
-
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set2_10000.csv').astype('float32')
+    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set3_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
 
@@ -473,6 +494,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
     
     # Initialize DBN and model
+    '''
     layers = [148, 128, 64, 32, 16, 8, 4]
     dbn = DBN(148, layers)
     dbn.train_DBN(X_train)  # Assuming DBN pretraining is implemented
@@ -483,16 +505,33 @@ if __name__ == '__main__':
     # train_classifier_manual(model, train_loader, test_loader, num_epochs=10)
     # Plot the RBM layers
     # plot_rbm_layers(dbn)
+    '''
 
-    save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
-    print("States: ", model.state_dict().keys())
-    torch.save({
-        'model_state_dict': model.state_dict(),  # Save the model's parameters
-        'dbn_layers': layers,                   # Save the DBN architecture
-        'input_size': 148,                      # Save the input size for reconstruction
-        'visible_layer_biases': [layer['vb'] for layer in dbn.layer_parameters]  # Save all visible layer biases (vb) for each layer
-    }, save_path)
+        # Define the layers and initialize the DBN
+    layers = [148, 128, 64, 32, 16, 8, 4]
+    dbn = DBN(input_size=148, layers=layers)
+
+    # Load the pretrained DBN model
+    pretrained_model_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
+    dbn.initialize_dbn_from_server(pretrained_model_path)
+
     
-    print(f"Trained DBN-RBM model saved at: {save_path}")
+    print("DBN successfully initialized with weights from global model.")
+
+    dbn.train_DBN(X_train)  # Assuming DBN pretraining is implemented
+    model = dbn.initialize_model()
+    print("FINAL FNN MODEL TRAINING...")
+    # Train the model with both train and test accuracy tracking
+    train_and_evaluate(model, train_loader, test_loader, num_epochs=10)
+
+
+    # save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
+    # torch.save({
+    #     'model_state_dict': model.state_dict(),  # Save the model's parameters
+    #     'dbn_layers': layers,                   # Save the DBN architecture
+    #     'input_size': 148                       # Save the input size for reconstruction
+    # }, save_path)
+    
+    # print(f"Trained DBN-RBM model saved at: {save_path}")
 
     
