@@ -100,6 +100,7 @@ func checkAuth(id string) bool {
 	json.Unmarshal([]byte(jsonData), &list)
 
 	for i := 0; i < len(list.valid); i++ {
+		fmt.Print(id, list.valid[i])
 		if id == list.valid[i] {
 			return true
 		}
@@ -110,13 +111,13 @@ func checkAuth(id string) bool {
 
 func (this *Server) SendFile(id string, reply *[]byte) error {
 	// Ensure the file exists in the current directory
+	fmt.Print(id)
 
-	if !checkAuth(id) {
-		return fmt.Errorf("Invalid member!")
-	}
+	// if !checkAuth(id) {
+	// 	return fmt.Errorf("Invalid member!")
+	// }
 
 	path := os.Getenv("PARAMS_PATH")
-	fmt.Print(path)
 
 	file, err := os.Open(path)
 
@@ -137,8 +138,10 @@ func (this *Server) SendFile(id string, reply *[]byte) error {
 }
 
 func (this *Server) SaveFile(args Args, reply string) error {
+	fmt.Print(args.id)
 
-	if !checkAuth(args.name) {
+	if !checkAuth(args.id) {
+
 		return fmt.Errorf("Invalid member!")
 	}
 
