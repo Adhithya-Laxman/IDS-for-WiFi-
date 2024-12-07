@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import os
 import random
 from tqdm import trange
 from RBM import RBM
@@ -481,6 +482,7 @@ if __name__ == '__main__':
     dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set3_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
+    os.environ["NUMBER_ITR"] = dataset.shape()[0] - 1
 
     # Split into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)

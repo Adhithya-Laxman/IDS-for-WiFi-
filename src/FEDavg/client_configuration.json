@@ -13,8 +13,9 @@
         ],
         "last_iteration_summary": {
             "total_instances_trained": 650,
-            "global_model_path": "C:\\Users\\Admin\\Desktop\\2105001\\IDS Project\\IDS-for-WiFi-\\src\\trained models\\GLOBAL_dbn_rbm_model.pth",
+            "global_model_path": "/home/karthikeyan/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth",
             "last_updated": "2024-11-29T06:21:00Z"
         }
     }
 }
+

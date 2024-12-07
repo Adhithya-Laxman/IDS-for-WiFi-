@@ -1,18 +1,125 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/rpc"
 	"os"
+	"os/exec"
+	"time"
 )
 
 type Server struct{}
 
-func (this *Server) SendFile(filename string, reply *[]byte) error {
+type UserList struct {
+	valid []string
+}
+
+type Args struct {
+	id                string
+	name              string
+	instances_updated int
+	content           []byte
+}
+
+type Client struct {
+	ClientID                      string `json:"client_id"`
+	Name                          string `json:"name"`
+	InstancesTrainedLastIteration int    `json:"instances_trained_last_iteration"`
+	ModelPath                     string `json:"model_path"`
+	LastUpdated                   string `json:"last_updated"`
+}
+
+type LastIterationSummary struct {
+	TotalInstancesTrained int    `json:"total_instances_trained"`
+	GlobalModelPath       string `json:"global_model_path"`
+	LastUpdated           string `json:"last_updated"`
+}
+
+type NetworkSummary struct {
+	TotalClients         int                  `json:"total_clients"`
+	Timestamp            string               `json:"timestamp"`
+	Clients              []Client             `json:"clients"`
+	LastIterationSummary LastIterationSummary `json:"last_iteration_summary"`
+}
+
+type Response struct {
+	NetworkSummary NetworkSummary `json:"network_summary"`
+}
+
+// Update JSON data with new clients and update instances
+func updateData(existingData *Response, newClients []Client) error {
+	// Append the new clients to the existing client list
+	existingData.NetworkSummary.Clients = append(existingData.NetworkSummary.Clients, newClients...)
+
+	// Update total instances trained
+	totalInstances := 0
+	for _, client := range existingData.NetworkSummary.Clients {
+		totalInstances += client.InstancesTrainedLastIteration
+	}
+	existingData.NetworkSummary.LastIterationSummary.TotalInstancesTrained = totalInstances
+
+	// Update the timestamp and last_updated
+	currentTime := time.Now().Format(time.RFC3339)
+	existingData.NetworkSummary.Timestamp = currentTime
+	existingData.NetworkSummary.LastIterationSummary.LastUpdated = currentTime
+
+	return nil
+}
+
+// Write updated data to a file
+func writeDataToFile(data *Response, fileName string) error {
+	// Open the file for writing (create if doesn't exist)
+	file, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("error creating file: %v", err)
+	}
+	defer file.Close()
+
+	// Marshal the data into JSON format
+	updatedData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshalling data to JSON: %v", err)
+	}
+
+	// Write the updated JSON data to the file
+	_, err = file.Write(updatedData)
+	if err != nil {
+		return fmt.Errorf("error writing data to file: %v", err)
+	}
+
+	return nil
+}
+
+func checkAuth(id string) bool {
+	var list UserList
+
+	jsonData, _ := os.ReadFile("auth.json")
+	json.Unmarshal([]byte(jsonData), &list)
+
+	for i := 0; i < len(list.valid); i++ {
+		if id == list.valid[i] {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (this *Server) SendFile(id string, reply *[]byte) error {
 	// Ensure the file exists in the current directory
-	file, err := os.Open(filename)
+
+	if !checkAuth(id) {
+		return fmt.Errorf("Invalid member!")
+	}
+
+	path := os.Getenv("PARAMS_PATH")
+	fmt.Print(path)
+
+	file, err := os.Open(path)
+
 	if err != nil {
 		return err
 	}
@@ -29,9 +136,35 @@ func (this *Server) SendFile(filename string, reply *[]byte) error {
 	return nil
 }
 
+func (this *Server) SaveFile(args Args, reply string) error {
+
+	if !checkAuth(args.name) {
+		return fmt.Errorf("Invalid member!")
+	}
+
+	path := "./trained models/" + args.name + ".pth"
+	err := os.WriteFile(path, args.content, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	var response Response
+	jsonData, _ := os.ReadFile("../FEDavg/client_configuration.json")
+	NewClient := []Client{{args.name, args.name, args.instances_updated, path, ""}}
+	json.Unmarshal(jsonData, &response)
+	updateData(&response, NewClient)
+	writeDataToFile(&response, "../FEDavg/client_configuration.json")
+
+	exec.Command("source /home/karthikeyan/.local/share/pipx/venvs/torch/bin/activate")
+	exec.Command("python3 ../FEDavg/fedavg.py")
+	return nil
+}
+
 func server() {
 	rpc.Register(new(Server))
 	ln, err := net.Listen("tcp", "0.0.0.0:8080")
+
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -41,13 +174,11 @@ func server() {
 		if err != nil {
 			continue
 		}
+		fmt.Print("Accepted!")
 		go rpc.ServeConn(c)
 	}
 }
 
 func main() {
 	server()
-	// go client()
-	var input string
-	fmt.Scanln(&input)
 }

@@ -12,7 +12,22 @@ class FedAvgUpdater:
 
     def _load_json(self):
         with open(self.json_file_path, "r") as file:
-            return json.load(file)
+            parsed_data = json.load(file)
+
+            # Extract relevant fields
+            clients = parsed_data["network_summary"]["clients"]
+            last_iter_updated = parsed_data["network_summary"]["last_iteration_summary"]["last_updated"]
+
+            # Convert last_updated timestamps to datetime
+            last_iter_time = datetime.strptime(last_iter_updated, "%Y-%m-%dT%H:%M:%SZ")
+
+            # Filter clients
+            parsed_data["network_summary"]["clients"] = [
+                client for client in clients
+                if datetime.strptime(client["last_updated"], "%Y-%m-%dT%H:%M:%SZ") > last_iter_time
+            ]
+
+            return parsed_data
 
     def _load_global_model(self):
         try:
@@ -131,10 +146,11 @@ from fedavg import FedAvgUpdater  # Assuming the class is in fedavg.py
 
 def main():
     # Path to the network configuration JSON file
-    json_file_path = r"C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\FEDavg\client_configuration.json"  # Update the path as needed
+    json_file_path = os.getenv("JSON_PATH")  # Update the path as needed
 
     # Initialize FedAvgUpdater with the configuration file
     updater = FedAvgUpdater(json_file_path)
+    
 
     # Display the parameters of the global model
     print("Displaying Global Model Parameters:")
