@@ -457,7 +457,7 @@ if __name__ == '__main__':
     # Load dataset
 
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set1_10000.csv').astype('float32')
+    dataset = pd.read_csv('/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/datasets/processed/Preprocessed_set_with_twoattack_normals.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
 
@@ -484,7 +484,7 @@ if __name__ == '__main__':
     # Plot the RBM layers
     # plot_rbm_layers(dbn)
 
-    save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\GLOBAL_dbn_rbm_model.pth'
+    save_path = '/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth'
     print("States: ", model.state_dict().keys())
     torch.save({
         'model_state_dict': model.state_dict(),  # Save the model's parameters

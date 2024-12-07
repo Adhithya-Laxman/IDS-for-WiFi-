@@ -12,6 +12,15 @@ from sklearn.metrics import accuracy_score
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 from sklearn.metrics import precision_score, recall_score, f1_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import torch
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+import numpy as np
+
 
 class DBN:
     def __init__(self, input_size, layers, mode = 'bernoulli', gpu = False, k = 5, savefile = None):
@@ -245,10 +254,7 @@ def trial_dataset():
 	np.random.shuffle(dataset)
 	dataset = torch.from_numpy(dataset)
 	return dataset
-import torch
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc
-import numpy as np
+
 
 def train_FNN(model, dataloader, num_epochs=10):
     criterion = torch.nn.CrossEntropyLoss()  # Multi-class classification loss
@@ -485,10 +491,6 @@ def train_and_evaluate(model, train_loader, test_loader, num_epochs=10):
 
     return model
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-from sklearn.metrics import confusion_matrix
 
 def plot_metrics_and_confusion_matrix(train_accuracies, test_accuracies, precisions, recalls, f1_scores, all_labels, all_predictions):
     # Create a 1x3 subplot layout (1 row, 3 columns)
@@ -648,7 +650,9 @@ if __name__ == '__main__':
     # Load dataset
 
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set2_10000.csv').astype('float32')
+    # dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set2_10000.csv').astype('float32')
+    dataset = pd.read_csv('/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/datasets/processed/Preprocessed_set2_10000.csv').astype('float32')
+
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
 
@@ -675,7 +679,7 @@ if __name__ == '__main__':
     # Plot the RBM layers
     # plot_rbm_layers(dbn)
 
-    save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
+    save_path = '/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/src/trained models/dbn_rbm_model_CLIENT2.pth'
     print("States: ", model.state_dict().keys())
     torch.save({
         'model_state_dict': model.state_dict(),  # Save the model's parameters
