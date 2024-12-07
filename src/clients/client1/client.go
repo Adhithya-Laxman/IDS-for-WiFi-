@@ -19,7 +19,7 @@ type Args struct {
 
 func getParams() {
 	c, err := rpc.Dial("tcp", "NotAvailable-37552.portmap.host:37552")
-	path := os.Getenv("PARAMS_PATH")
+	path := "sample.pth"
 	id := os.Getenv("UNIQUE_ID")
 
 	if err != nil {
