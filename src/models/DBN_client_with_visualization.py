@@ -11,7 +11,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
-from sklearn.metrics import precision_score, recall_score, f1_score
 
 class DBN:
     def __init__(self, input_size, layers, mode = 'bernoulli', gpu = False, k = 5, savefile = None):
@@ -149,29 +148,51 @@ class DBN:
         if self.savefile is not None:
             torch.save(self.layer_parameters, self.savefile)
     
-    def initialize_dbn(self, model_path):
+    def initialize_dbn_from_server(self, model_path):
         """
         Load a pretrained DBN model from a file and initialize the DBN with the weights and biases.
 
         Args:
             model_path (str): Path to the saved DBN-RBM model file.
         """
+        import torch
+        
         print(f"Loading pretrained DBN model from: {model_path}")
         try:
-            # Load the saved model state dictionary
+            # Load the saved model checkpoint
             checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
             
-            # Extract layer weights and biases
+            # Extract model_state_dict
+            model_state_dict = checkpoint['model_state_dict']
+            
+            # Load visible layer biases from the checkpoint
+            visible_layer_biases = checkpoint.get('visible_layer_biases', None)
+            if visible_layer_biases is None:
+                raise KeyError("Visible layer biases ('visible_layer_biases') not found in the checkpoint.")
+
+            # Initialize DBN layers with the loaded weights and biases
             for i, layer in enumerate(self.layer_parameters):
-                layer['W'] = checkpoint[f'layer_{i}_W']
-                layer['hb'] = checkpoint[f'layer_{i}_hb']
-                layer['vb'] = checkpoint[f'layer_{i}_vb']
+                weight_key = f'{2 * i}.weight'  # Key format for weights
+                bias_key = f'{2 * i}.bias'     # Key format for biases
+                
+                if weight_key in model_state_dict and bias_key in model_state_dict:
+                    # Load weights and hidden biases for each layer
+                    layer['W'] = model_state_dict[weight_key].numpy()  # Convert to NumPy if needed
+                    layer['hb'] = model_state_dict[bias_key].numpy()   # Convert to NumPy if needed
+                    
+                    # Load the visible bias (vb) from the visible_layer_biases list
+                    if i < len(visible_layer_biases):
+                        layer['vb'] = visible_layer_biases[i]  # Get vb for the current layer
+                    else:
+                        # If visible bias is not available, initialize with zeros
+                        layer['vb'] = torch.zeros(layer['W'].shape[1]).numpy()  # Zero-initialization for vb
+                else:
+                    raise KeyError(f"Keys {weight_key} and/or {bias_key} not found in model_state_dict.")
             
             print("Pretrained DBN model successfully loaded and initialized.")
         except Exception as e:
             print(f"Error loading DBN model: {e}")
             raise
-
 
     def reconstructor(self, x):
         '''
@@ -245,18 +266,11 @@ def trial_dataset():
 	np.random.shuffle(dataset)
 	dataset = torch.from_numpy(dataset)
 	return dataset
-import torch
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc
-import numpy as np
 
 def train_FNN(model, dataloader, num_epochs=10):
     criterion = torch.nn.CrossEntropyLoss()  # Multi-class classification loss
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
-    all_labels = []  # To store true labels
-    all_probs = []   # To store predicted probabilities
-
     for epoch in range(num_epochs):
         total, correct = 0, 0
         for inputs, labels in dataloader:
@@ -271,99 +285,53 @@ def train_FNN(model, dataloader, num_epochs=10):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-            # Append labels and probabilities for ROC curve
-            all_labels.extend(labels.cpu().numpy())  # True labels
-            all_probs.extend(torch.nn.functional.softmax(outputs, dim=1).cpu().numpy())  # Predicted probabilities
-
         accuracy = 100 * correct / total
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Accuracy: {accuracy:.2f}%")
 
-    # After training, calculate the ROC curve
-    all_labels = np.array(all_labels)
-    all_probs = np.array(all_probs)
-    
-    # For binary classification, you can use the probabilities for class 1 (if using softmax)
-    fpr, tpr, thresholds = roc_curve(all_labels, all_probs[:, 1])  # Assuming class 1 is positive
-    roc_auc = auc(fpr, tpr)
-
-    # Plot ROC curve
-    plt.figure(figsize=(8, 6))
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')  # Diagonal line
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend(loc='lower right')
-    plt.show()
 
 
+# def train_classifier(model, dataset, labels, epochs=100, batch_size=128):
+#     criterion = torch.nn.CrossEntropyLoss()  # Use CrossEntropyLoss for softmax
+#     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    # def train_classifier(model, dataset, labels, epochs=100, batch_size=128):
-    #     criterion = torch.nn.CrossEntropyLoss()  # Use CrossEntropyLoss for softmax
-    #     optimizer = optim.Adam(model.parameters(), lr=0.001)
+#     for epoch in range(epochs):
+#         model.train()
+#         for i in range(0, len(dataset), batch_size):
+#             batch_x = dataset[i:i + batch_size]
+#             batch_y = labels[i:i + batch_size]
 
-    #     for epoch in range(epochs):
-    #         model.train()
-    #         for i in range(0, len(dataset), batch_size):
-    #             batch_x = dataset[i:i + batch_size]
-    #             batch_y = labels[i:i + batch_size]
+#             optimizer.zero_grad()  # Zero gradients
+#             outputs = model(batch_x)  # Forward pass
+#             loss = criterion(outputs, batch_y)  # Compute loss
+#             loss.backward()  # Backward pass
+#             optimizer.step()  # Update weights
 
-    #             optimizer.zero_grad()  # Zero gradients
-    #             outputs = model(batch_x)  # Forward pass
-    #             loss = criterion(outputs, batch_y)  # Compute loss
-    #             loss.backward()  # Backward pass
-    #             optimizer.step()  # Update weights
-
-    #         if (epoch + 1) % 10 == 0:
-    #             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
-
+#         if (epoch + 1) % 10 == 0:
+#             print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
 
 
-
-import torch
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, roc_curve, auc
-from sklearn.preprocessing import label_binarize
-
-from sklearn.metrics import roc_curve, auc
-from sklearn.preprocessing import label_binarize
-import matplotlib.pyplot as plt
-import numpy as np
-
+# Training function with both train and test accuracy tracking
 def train_and_evaluate(model, train_loader, test_loader, num_epochs=10):
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()  # Multi-class classification loss
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-    # Store metrics
-    train_accuracies, test_accuracies = [], []
-    train_losses = []  # To store training losses for learning curve
-    precisions, recalls, f1_scores, detection_rates = [], [], [], []
-    all_labels, all_predictions, all_probs = [], [], []  # For confusion matrix and ROC curve
 
     for epoch in range(num_epochs):
         # Training phase
         model.train()
         train_correct, train_total = 0, 0
-        epoch_loss = 0
         for inputs, labels in train_loader:
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-
-            # Calculate training accuracy and loss
+            
+            # Calculate training accuracy
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += (predicted == labels).sum().item()
-            epoch_loss += loss.item()
 
         train_accuracy = 100 * train_correct / train_total
-        train_accuracies.append(train_accuracy)
-        train_losses.append(epoch_loss / len(train_loader))  # Average loss
 
         # Testing phase
         model.eval()
@@ -375,151 +343,14 @@ def train_and_evaluate(model, train_loader, test_loader, num_epochs=10):
                 test_total += labels.size(0)
                 test_correct += (predicted == labels).sum().item()
 
-                # Store predictions and labels for metric calculation
-                all_labels.extend(labels.cpu().numpy())
-                all_predictions.extend(predicted.cpu().numpy())
-                
-                # Store predicted probabilities for ROC curve
-                probs = torch.nn.Softmax(dim=1)(outputs)
-                all_probs.extend(probs.cpu().numpy())
-
-        # Calculate metrics
         test_accuracy = 100 * test_correct / test_total
-        precision = precision_score(all_labels, all_predictions, average="macro") * 100
-        recall = recall_score(all_labels, all_predictions, average="macro") * 100
-        f1 = f1_score(all_labels, all_predictions, average="macro") * 100
-        detection_rate = recall  # Detection rate is same as recall in IDS context
-
-        # Append metrics for graphing
-        test_accuracies.append(test_accuracy)
-        precisions.append(precision)
-        recalls.append(recall)
-        f1_scores.append(f1)
-        detection_rates.append(detection_rate)
 
         print(f"Epoch [{epoch+1}/{num_epochs}], "
               f"Train Loss: {loss.item():.4f}, Train Accuracy: {train_accuracy:.2f}%, "
-              f"Test Accuracy: {test_accuracy:.2f}%, "
-              f"Precision: {precision:.2f}%, Recall: {recall:.2f}%, "
-              f"F1-Score: {f1:.2f}%, Detection Rate: {detection_rate:.2f}%")    # Plot graphs
+              f"Test Accuracy: {test_accuracy:.2f}%")
+        
 
-    # 1. Line Graph: Accuracy vs Epochs (Training vs Testing)
-    epochs = range(1, num_epochs + 1)
-    plt.figure(figsize=(10, 5))
-    plt.plot(epochs, train_accuracies, label='Train Accuracy', marker='o', linestyle='-', color='blue')
-    plt.plot(epochs, test_accuracies, label='Test Accuracy', marker='o', linestyle='-', color='green')
-    plt.title('Accuracy vs Epochs', fontsize=16, weight='bold')
-    plt.xlabel('Epochs', fontsize=14)
-    plt.ylabel('Accuracy (%)', fontsize=14)
-    plt.legend(loc='lower right', fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.show()
-
-    # 2. Line Graph: Precision, Recall, F1-Score, Detection Rate vs Epochs
-    plt.figure(figsize=(10, 5))
-    plt.plot(epochs, precisions, label='Precision', marker='o', linestyle='-', color='blue')
-    plt.plot(epochs, recalls, label='Recall', marker='o', linestyle='-', color='green')
-    plt.plot(epochs, f1_scores, label='F1-Score', marker='o', linestyle='-', color='orange')
-    plt.plot(epochs, detection_rates, label='Detection Rate', marker='o', linestyle='-', color='red')
-    plt.title('Metrics vs Epochs', fontsize=16, weight='bold')
-    plt.xlabel('Epochs', fontsize=14)
-    plt.ylabel('Percentage (%)', fontsize=14)
-    plt.legend(loc='lower right', fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.show()
-
-    # 3. Bar Graph: Comparison of Final Epoch Metrics (Precision, Recall, F1, Test Accuracy)
-    final_metrics = [precisions[-1], recalls[-1], f1_scores[-1], test_accuracies[-1]]
-    metrics_labels = ['Precision', 'Recall', 'F1-Score', 'Test Accuracy']
-    plt.figure(figsize=(10, 6))
-    plt.bar(metrics_labels, final_metrics, color=['blue', 'green', 'orange', 'red'])
-    plt.title('Comparison of Final Epoch Metrics', fontsize=16)
-    plt.ylabel('Percentage (%)', fontsize=14)
-    plt.xlabel('Metrics', fontsize=14)
-    plt.tight_layout()
-    plt.show()
-
-    # 4. Confusion Matrix Heatmap
-    cm = confusion_matrix(all_labels, all_predictions)
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Class 0', 'Class 1', 'Class 2', 'Class 3'],
-                yticklabels=['Class 0', 'Class 1', 'Class 2', 'Class 3'])
-    plt.title('Confusion Matrix', fontsize=16)
-    plt.ylabel('True Label', fontsize=14)
-    plt.xlabel('Predicted Label', fontsize=14)
-    plt.tight_layout()
-    plt.show()
-
-    # 5. ROC Curve
-    # Binarize the true labels (since ROC curve works with binary/multi-class labels)
-    y_bin = label_binarize(all_labels, classes=[0, 1, 2, 3])  # Adjust classes as needed
-
-    # Compute ROC curve and AUC for each class
-    fpr, tpr, _ = roc_curve(y_bin.ravel(), np.array(all_probs).ravel())
-    roc_auc = auc(fpr, tpr)
-
-    plt.figure(figsize=(8, 6))
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.title('Receiver Operating Characteristic Curve', fontsize=16)
-    plt.xlabel('False Positive Rate', fontsize=14)
-    plt.ylabel('True Positive Rate', fontsize=14)
-    plt.legend(loc='lower right')
-    plt.tight_layout()
-    plt.show()
-
-    # 6. Boxplot: Accuracy Distribution over Epochs
-    plt.figure(figsize=(10, 6))
-    plt.boxplot([train_accuracies, test_accuracies], labels=['Train Accuracy', 'Test Accuracy'])
-    plt.title('Accuracy Distribution over Epochs', fontsize=16)
-    plt.ylabel('Accuracy (%)', fontsize=14)
-    plt.tight_layout()
-    plt.show()
-    plot_metrics_and_confusion_matrix(
-    train_accuracies, test_accuracies, 
-    precisions, recalls, f1_scores, 
-    all_labels, all_predictions
-    )
-
-    return model
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-from sklearn.metrics import confusion_matrix
-
-def plot_metrics_and_confusion_matrix(train_accuracies, test_accuracies, precisions, recalls, f1_scores, all_labels, all_predictions):
-    # Create a 1x3 subplot layout (1 row, 3 columns)
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-
-    # Plot accuracies
-    axes[0].plot(range(len(train_accuracies)), train_accuracies, label='Train Accuracy', color='blue')
-    axes[0].plot(range(len(test_accuracies)), test_accuracies, label='Test Accuracy', color='red')
-    axes[0].set_title('Accuracy vs Epoch', fontsize=16)
-    axes[0].set_xlabel('Epoch', fontsize=14)
-    axes[0].set_ylabel('Accuracy (%)', fontsize=14)
-    axes[0].legend(loc='lower right')
-
-    # Plot metrics (Precision, Recall, F1 Score)
-    axes[1].plot(range(len(precisions)), precisions, label='Precision', color='green')
-    axes[1].plot(range(len(recalls)), recalls, label='Recall', color='blue')
-    axes[1].plot(range(len(f1_scores)), f1_scores, label='F1 Score', color='orange')
-    axes[1].set_title('Metrics vs Epoch', fontsize=16)
-    axes[1].set_xlabel('Epoch', fontsize=14)
-    axes[1].set_ylabel('Percentage (%)', fontsize=14)
-    axes[1].legend(loc='lower right')
-
-    # Plot confusion matrix
-    cm = confusion_matrix(all_labels, all_predictions)
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, ax=axes[2], annot_kws={"size": 14})
-    axes[2].set_title('Confusion Matrix', fontsize=16)
-    axes[2].set_xlabel('Predicted Label', fontsize=14)
-    axes[2].set_ylabel('True Label', fontsize=14)
-
-    plt.tight_layout()
-    plt.show()
+import torch
 
 # Training function with manual backpropagation and weight update
 def train_classifier_manual(model, dataset, labels, epochs=100, batch_size=128, learning_rate=0.001):
@@ -646,9 +477,8 @@ from torchviz import make_dot
 
 if __name__ == '__main__':
     # Load dataset
-
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set2_10000.csv').astype('float32')
+    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set3_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
 
@@ -664,6 +494,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
     
     # Initialize DBN and model
+    '''
     layers = [148, 128, 64, 32, 16, 8, 4]
     dbn = DBN(148, layers)
     dbn.train_DBN(X_train)  # Assuming DBN pretraining is implemented
@@ -674,16 +505,30 @@ if __name__ == '__main__':
     # train_classifier_manual(model, train_loader, test_loader, num_epochs=10)
     # Plot the RBM layers
     # plot_rbm_layers(dbn)
+    '''
 
-    save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
-    print("States: ", model.state_dict().keys())
-    torch.save({
-        'model_state_dict': model.state_dict(),  # Save the model's parameters
-        'dbn_layers': layers,                   # Save the DBN architecture
-        'input_size': 148,                      # Save the input size for reconstruction
-        'visible_layer_biases': [layer['vb'] for layer in dbn.layer_parameters]  # Save all visible layer biases (vb) for each layer
-    }, save_path)
-    
-    print(f"Trained DBN-RBM model saved at: {save_path}")
+        # Define the layers and initialize the DBN
+    layers = [148, 128, 64, 32, 16, 8, 4]
+    dbn = DBN(input_size=148, layers=layers)
 
+    # Load the pretrained DBN model
+    pretrained_model_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
+    dbn.initialize_dbn_from_server(pretrained_model_path)
+    print("DBN successfully initialized with weights from global model.")
+
+    dbn.train_DBN(X_train)  # Assuming DBN pretraining is implemented
+    model = dbn.initialize_model()
+    print("FINAL FNN MODEL TRAINING...")
+    # Train the model with both train and test accuracy tracking
+    train_and_evaluate(model, train_loader, test_loader, num_epochs=10)
+
+    # save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
+    # torch.save({
+    #     'model_state_dict': model.state_dict(),  # Save the model's parameters
+    #     'dbn_layers': layers,                   # Save the DBN architecture
+    #     'input_size': 148                       # Save the input size for reconstruction
+    # }, save_path)
     
+    # print(f"Trained DBN-RBM model saved at: {save_path}")
+
+
