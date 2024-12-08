@@ -19,8 +19,9 @@ type Args struct {
 
 func getParams() {
 	c, err := rpc.Dial("tcp", "NotAvailable-37552.portmap.host:37552")
-	path := "sample.pth"
+	path := os.Getenv("PARAMS_PATH")
 	id := os.Getenv("UNIQUE_ID")
+	fmt.Println(id)
 
 	if err != nil {
 		fmt.Println("Connection error:", err)
@@ -45,7 +46,20 @@ func getParams() {
 	}
 
 	fmt.Println("Params recieved")
-	go exec.Command("python ../../models/DBN_client.py")
+	cmd1 := exec.Command("ls", "-l")
+	cmd1.Stdout = os.Stdout // Ensure output is printed to the terminal
+	cmd1.Stderr = os.Stderr
+	if err := cmd1.Run(); err != nil {
+		fmt.Println("Error executing 'ls -l':", err)
+	}
+
+	// Execute the Python script
+	cmd2 := exec.Command("python3", "../../models/DBN_client.py")
+	cmd2.Stdout = os.Stdout // Ensure output is printed to the terminal
+	cmd2.Stderr = os.Stderr
+	if err := cmd2.Run(); err != nil {
+		fmt.Println("Error executing Python script:", err)
+	}
 }
 
 func updateParams() {

@@ -479,10 +479,10 @@ from torchviz import make_dot
 if __name__ == '__main__':
     # Load dataset
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set3_10000.csv').astype('float32')
+    dataset = pd.read_csv('/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/datasets/processed/Preprocessed_set3_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
-    os.environ["NUMBER_ITR"] = dataset.shape()[0] - 1
+    # os.environ["NUMBER_ITR"] = dataset.shape()[0] - 1
 
     # Split into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
@@ -514,7 +514,7 @@ if __name__ == '__main__':
     dbn = DBN(input_size=148, layers=layers)
 
     # Load the pretrained DBN model
-    pretrained_model_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
+    pretrained_model_path = '/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
     dbn.initialize_dbn_from_server(pretrained_model_path)
 
     
@@ -527,13 +527,13 @@ if __name__ == '__main__':
     train_and_evaluate(model, train_loader, test_loader, num_epochs=10)
 
 
-    # save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
-    # torch.save({
-    #     'model_state_dict': model.state_dict(),  # Save the model's parameters
-    #     'dbn_layers': layers,                   # Save the DBN architecture
-    #     'input_size': 148                       # Save the input size for reconstruction
-    # }, save_path)
+    save_path = '/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/src/trained models/dbn_rbm_model_CLIENT3.pth'
+    torch.save({
+        'model_state_dict': model.state_dict(),  # Save the model's parameters
+        'dbn_layers': layers,                   # Save the DBN architecture
+        'input_size': 148                       # Save the input size for reconstruction
+    }, save_path)
     
-    # print(f"Trained DBN-RBM model saved at: {save_path}")
+    print(f"Trained DBN-RBM model saved at: {save_path}")
 
     

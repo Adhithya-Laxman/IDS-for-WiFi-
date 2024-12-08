@@ -6,7 +6,7 @@ from datetime import datetime
 class FedAvgUpdater:
     def __init__(self, json_file_path):
         self.json_file_path = json_file_path
-        self.network_summary = self._load_json()
+        self.network_summary = self._load_json(json_file_path)
         self.global_model_path = self.network_summary["network_summary"]["last_iteration_summary"]["global_model_path"]
         self.global_model = self._load_global_model()
 
