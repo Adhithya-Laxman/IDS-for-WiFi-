@@ -14,7 +14,7 @@ import (
 type Server struct{}
 
 type UserList struct {
-	valid []string
+	Valid []string `json:"valid"`
 }
 
 type Args struct {
@@ -96,12 +96,24 @@ func writeDataToFile(data *Response, fileName string) error {
 func checkAuth(id string) bool {
 	var list UserList
 
-	jsonData, _ := os.ReadFile("auth.json")
-	json.Unmarshal([]byte(jsonData), &list)
+	path := os.Getenv("AUTH_JSON")
+	jsonData, err := os.ReadFile(path)
 
-	for i := 0; i < len(list.valid); i++ {
-		fmt.Print(id, list.valid[i])
-		if id == list.valid[i] {
+	fmt.Print(path)
+
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	err = json.Unmarshal([]byte(jsonData), &list)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for i := 0; i < len(list.Valid); i++ {
+		fmt.Print(id, list.Valid[i])
+		if id == list.Valid[i] {
 			return true
 		}
 	}
@@ -111,11 +123,12 @@ func checkAuth(id string) bool {
 
 func (this *Server) SendFile(id string, reply *[]byte) error {
 	// Ensure the file exists in the current directory
-	fmt.Print(id)
 
-	// if !checkAuth(id) {
-	// 	return fmt.Errorf("Invalid member!")
-	// }
+	fmt.Println(id, len(id))
+
+	if !checkAuth(id) {
+		return fmt.Errorf("Invalid member!")
+	}
 
 	path := os.Getenv("PARAMS_PATH")
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Set environment variables
-ENV_FILE="$HOME/.my_env_vars"
+ENV_FILE="$HOME/.client_vars"
 echo "Setting environment variables..."
 cat <<EOL > "$ENV_FILE"
-export PARAMS_PATH="/home/karthikeyan/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth"
+export PARAMS_PATH="$HOME/Downloads/Sample.pth"
 export UNIQUE_ID="client_001"
 export NUMBER_ITR="0"
 export NAME="$hostname"

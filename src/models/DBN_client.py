@@ -1,3 +1,5 @@
+#!/home/karthikeyan/.local/share/pipx/venvs/torch/bin/python
+
 import numpy as np
 import torch
 import os
@@ -479,10 +481,10 @@ from torchviz import make_dot
 if __name__ == '__main__':
     # Load dataset
     
-    dataset = pd.read_csv(r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\datasets\processed\Preprocessed_set3_10000.csv').astype('float32')
+    dataset = pd.read_csv('~/IDS-for-WiFi-/datasets/processed/Preprocessed_set3_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
-    os.environ["NUMBER_ITR"] = dataset.shape()[0] - 1
+    os.environ["NUMBER_ITR"] = str(dataset.shape[0] - 1)
 
     # Split into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
@@ -514,7 +516,7 @@ if __name__ == '__main__':
     dbn = DBN(input_size=148, layers=layers)
 
     # Load the pretrained DBN model
-    pretrained_model_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
+    pretrained_model_path = f'{os.environ["HOME"]}/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
     dbn.initialize_dbn_from_server(pretrained_model_path)
 
     

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -19,7 +20,7 @@ type Args struct {
 
 func getParams() {
 	c, err := rpc.Dial("tcp", "NotAvailable-37552.portmap.host:37552")
-	path := "sample.pth"
+	path := os.Getenv("PARAMS_PATH")
 	id := os.Getenv("UNIQUE_ID")
 
 	if err != nil {
@@ -45,7 +46,11 @@ func getParams() {
 	}
 
 	fmt.Println("Params recieved")
-	go exec.Command("python ../../models/DBN_client.py")
+	var out bytes.Buffer
+	cmd := exec.Command(os.Getenv("HOME") + "/IDS-for-WiFi-/src/models/DBN_client.py")
+	cmd.Stdout = &out
+	fmt.Print(cmd.Run())
+	fmt.Print(out.String())
 }
 
 func updateParams() {
