@@ -12,10 +12,10 @@ import (
 )
 
 type Args struct {
-	id                string
-	name              string
-	instances_updated int
-	content           []byte
+	Id                string
+	Name              string
+	Instances_updated int
+	Content           []byte
 }
 
 func getParams() {
@@ -81,8 +81,8 @@ func updateParams() {
 	if err != nil {
 		return
 	}
-
-	err = c.Call("Server.SaveFile", args, "")
+	var reply string
+	err = c.Call("Server.SaveFile", args, &reply)
 	if err != nil {
 		fmt.Println("Error calling Server.SendFile:", err)
 		return

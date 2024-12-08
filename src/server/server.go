@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,10 +19,10 @@ type UserList struct {
 }
 
 type Args struct {
-	id                string
-	name              string
-	instances_updated int
-	content           []byte
+	Id                string
+	Name              string
+	Instances_updated int
+	Content           []byte
 }
 
 type Client struct {
@@ -62,7 +63,7 @@ func updateData(existingData *Response, newClients []Client) error {
 	existingData.NetworkSummary.LastIterationSummary.TotalInstancesTrained = totalInstances
 
 	// Update the timestamp and last_updated
-	currentTime := time.Now().Format(time.RFC3339)
+	currentTime := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 	existingData.NetworkSummary.Timestamp = currentTime
 	existingData.NetworkSummary.LastIterationSummary.LastUpdated = currentTime
 
@@ -112,7 +113,6 @@ func checkAuth(id string) bool {
 	}
 
 	for i := 0; i < len(list.Valid); i++ {
-		fmt.Print(id, list.Valid[i])
 		if id == list.Valid[i] {
 			return true
 		}
@@ -123,8 +123,7 @@ func checkAuth(id string) bool {
 
 func (this *Server) SendFile(id string, reply *[]byte) error {
 	// Ensure the file exists in the current directory
-
-	fmt.Println(id, len(id))
+	fmt.Print(id, "is downloading the params.")
 
 	if !checkAuth(id) {
 		return fmt.Errorf("Invalid member!")
@@ -150,30 +149,35 @@ func (this *Server) SendFile(id string, reply *[]byte) error {
 	return nil
 }
 
-func (this *Server) SaveFile(args Args, reply string) error {
-	fmt.Print(args.id)
+func (this *Server) SaveFile(args Args, reply *string) error {
+	fmt.Print(args.Id, "is Updating the params.")
 
-	if !checkAuth(args.id) {
+	if !checkAuth(args.Id) {
 
 		return fmt.Errorf("Invalid member!")
 	}
 
-	path := "./trained models/" + args.name + ".pth"
-	err := os.WriteFile(path, args.content, 0644)
+	path := os.Getenv("HOME") + "/IDS-for-WiFi-/src/trained models/" + args.Name + ".pth"
+	err := os.WriteFile(path, args.Content, 0644)
 
 	if err != nil {
 		return err
 	}
 
 	var response Response
-	jsonData, _ := os.ReadFile("../FEDavg/client_configuration.json")
-	NewClient := []Client{{args.name, args.name, args.instances_updated, path, ""}}
+	jsonData, err := os.ReadFile(os.Getenv("HOME") + "/IDS-for-WiFi-/src/FEDavg/client_configuration.json")
+	fmt.Print(err)
+	NewClient := []Client{{args.Id, args.Name, args.Instances_updated, path, time.Now().UTC().Format("2006-01-02T15:04:05Z")}}
 	json.Unmarshal(jsonData, &response)
 	updateData(&response, NewClient)
-	writeDataToFile(&response, "../FEDavg/client_configuration.json")
+	writeDataToFile(&response, os.Getenv("HOME")+"/IDS-for-WiFi-/src/FEDavg/client_configuration.json")
 
-	exec.Command("source /home/karthikeyan/.local/share/pipx/venvs/torch/bin/activate")
-	exec.Command("python3 ../FEDavg/fedavg.py")
+	fmt.Println("Params recieved")
+	var out bytes.Buffer
+	cmd := exec.Command(os.Getenv("HOME") + "/IDS-for-WiFi-/src/FEDavg/fedavg.py")
+	cmd.Stdout = &out
+	fmt.Print(cmd.Run())
+	fmt.Print(out.String())
 	return nil
 }
 
@@ -190,7 +194,6 @@ func server() {
 		if err != nil {
 			continue
 		}
-		fmt.Print("Accepted!")
 		go rpc.ServeConn(c)
 	}
 }

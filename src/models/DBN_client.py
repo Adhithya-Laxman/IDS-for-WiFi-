@@ -481,11 +481,11 @@ from torchviz import make_dot
 if __name__ == '__main__':
     # Load dataset
     
-    dataset = pd.read_csv('~/IDS-for-WiFi-/datasets/processed/Preprocessed_set3_10000.csv').astype('float32')
+    dataset = pd.read_csv(os.environ['HOME']+'/IDS-for-WiFi-/datasets/processed/Preprocessed_set3_10000.csv').astype('float32')
     features = dataset.iloc[:, :-1].to_numpy()  # All columns except last
     labels = dataset.iloc[:, -1].to_numpy()  # Last column as labels
-    os.environ["NUMBER_ITR"] = str(dataset.shape[0] - 1)
-
+    os.se= str(dataset.shape[0] - 1)
+    
     # Split into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
     X_train, X_test = torch.from_numpy(X_train), torch.from_numpy(X_test)

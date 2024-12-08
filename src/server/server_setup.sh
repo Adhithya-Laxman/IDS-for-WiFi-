@@ -14,3 +14,4 @@ EOL
 echo "Sourcing environment variables..."
 echo "source $ENV_FILE" >> "$HOME/.bashrc"
 source "$ENV_FILE"
+chmod +x $HOME"/IDS-for-WiFi-/src/FEDavg/fedavg.py"

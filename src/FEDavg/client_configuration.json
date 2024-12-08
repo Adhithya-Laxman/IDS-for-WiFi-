@@ -1,21 +1,27 @@
 {
-    "network_summary": {
-        "total_clients": 50,
-        "timestamp": "2024-11-29T06:21:00Z",
-        "clients": [
-            {
-                "client_id": "client_002",
-                "name": "Client Beta",
-                "instances_trained_last_iteration": 150,
-                "model_path": "C:\\Users\\Admin\\Desktop\\2105001\\IDS Project\\IDS-for-WiFi-\\src\\trained models\\dbn_rbm_model_CLIENT2.pth",
-                "last_updated": "2024-11-29T06:16:00Z"
-            }
-        ],
-        "last_iteration_summary": {
-            "total_instances_trained": 650,
-            "global_model_path": "/home/karthikeyan/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth",
-            "last_updated": "2024-11-29T06:21:00Z"
-        }
+  "network_summary": {
+    "total_clients": 50,
+    "timestamp": "2024-12-08T08:21:43Z",
+    "clients": [
+      {
+        "client_id": "client_002",
+        "name": "Client Beta",
+        "instances_trained_last_iteration": 150,
+        "model_path": "C:\\Users\\Admin\\Desktop\\2105001\\IDS Project\\IDS-for-WiFi-\\src\\trained models\\dbn_rbm_model_CLIENT2.pth",
+        "last_updated": "2024-11-29T06:16:00Z"
+      },
+      {
+        "client_id": "client_001",
+        "name": "karthikeyan-Vivobook-ASUSLaptop-M6500QC-M6500QC",
+        "instances_trained_last_iteration": 0,
+        "model_path": "/home/karthikeyan/IDS-for-WiFi-/src/trained models/karthikeyan-Vivobook-ASUSLaptop-M6500QC-M6500QC.pth",
+        "last_updated": "2024-12-08T08:21:43Z"
+      }
+    ],
+    "last_iteration_summary": {
+      "total_instances_trained": 150,
+      "global_model_path": "/home/karthikeyan/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth",
+      "last_updated": "2024-12-08T08:21:43Z"
     }
+  }
 }
-

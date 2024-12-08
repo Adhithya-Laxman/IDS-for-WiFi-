@@ -1,3 +1,5 @@
+#!/home/karthikeyan/.local/share/pipx/venvs/torch/bin/python
+
 import json
 import torch
 import os
