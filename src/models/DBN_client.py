@@ -1,4 +1,4 @@
-#!/home/karthikeyan/.local/share/pipx/venvs/torch/bin/python
+#!/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/venv/bin/python
 
 import numpy as np
 import torch
@@ -516,7 +516,7 @@ if __name__ == '__main__':
     dbn = DBN(input_size=148, layers=layers)
 
     # Load the pretrained DBN model
-    pretrained_model_path = f'{os.environ["HOME"]}/IDS-for-WiFi-/src/trained models/GLOBAL_dbn_rbm_model.pth'  # Replace with the actual path
+    pretrained_model_path = os.getenv("GLOBAL_PARAMS_PATH") # Replace with the actual path
     dbn.initialize_dbn_from_server(pretrained_model_path)
 
     
@@ -529,13 +529,13 @@ if __name__ == '__main__':
     train_and_evaluate(model, train_loader, test_loader, num_epochs=10)
 
 
-    # save_path = r'C:\Users\Admin\Desktop\2105001\IDS Project\IDS-for-WiFi-\src\trained models\dbn_rbm_model_CLIENT2.pth'
-    # torch.save({
-    #     'model_state_dict': model.state_dict(),  # Save the model's parameters
-    #     'dbn_layers': layers,                   # Save the DBN architecture
-    #     'input_size': 148                       # Save the input size for reconstruction
-    # }, save_path)
+    save_path = os.getenv("CLIENT_PARAMS_PATH")
+    torch.save({
+        'model_state_dict': model.state_dict(),  # Save the model's parameters
+        'dbn_layers': layers,                   # Save the DBN architecture
+        'input_size': 148                       # Save the input size for reconstruction
+    }, save_path)
     
-    # print(f"Trained DBN-RBM model saved at: {save_path}")
+    print(f"Trained DBN-RBM model saved at: {save_path}")
 
     

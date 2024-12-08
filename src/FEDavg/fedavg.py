@@ -1,4 +1,4 @@
-#!/home/karthikeyan/.local/share/pipx/venvs/torch/bin/python
+#!/home/adminroot/Desktop/2105001/IDS/IDS-for-WiFi-/venv/bin/python
 
 import json
 import torch

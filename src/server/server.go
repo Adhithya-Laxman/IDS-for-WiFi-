@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type Server struct{}
+type Server struct{} 
 
 type UserList struct {
 	Valid []string `json:"valid"`
@@ -136,7 +136,7 @@ func (this *Server) SendFile(id string, reply *[]byte) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //close whenever an error/exception occurs
 
 	// Read the file content
 	content, err := io.ReadAll(file)
