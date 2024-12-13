@@ -534,6 +534,8 @@ if __name__ == '__main__':
         'model_state_dict': model.state_dict(),  # Save the model's parameters
         'dbn_layers': layers,                   # Save the DBN architecture
         'input_size': 148                       # Save the input size for reconstruction
+	'visible_layer_biases': [layer['vb'] for layer in dbn.layer_parameters]  # Save all visible layer biases (vb) for each layer
+    
     }, save_path)
     
     print(f"Trained DBN-RBM model saved at: {save_path}")
